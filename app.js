@@ -27,11 +27,6 @@ let socketIdDetails = {};
 
 io.on('connection', socket => {
 
-  socket.on('join_room', (data) =>{
-    const {complaintId, clientIdentifierId} = data;
-    socket.join(room);
-  })
-
   socket.on('new-user', (clientIdentifierId, complaintId) => {
     // Check if the complaint ID already exists in socketIdDetails
     if (Object.values(socketIdDetails).filter(user => user.complaintId === complaintId).length < 3) {
