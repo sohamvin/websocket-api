@@ -1,3 +1,4 @@
+const { log } = require("console");
 const dotenv = require("dotenv");
 dotenv.config();
 
@@ -43,6 +44,9 @@ io.on('connection', socket => {
     } else {
       complaintMap[complaintId] = [socket.id]; // Correctly initialize the array for the complaintId
     }
+    console.log(complaintMap[complaintId], " ! ");
+    console.log(socketIdToComplaintId, " ! ");
+    console.log(socketIdToIdentifier, " ! ");
     
     io.emit('user-connected', activeUsers); // Broadcast to all connected clients
   });

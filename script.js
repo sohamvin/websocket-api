@@ -29,11 +29,11 @@ socket.on('user-connected', (activeUsers) => {
 });
 
 socket.on('receive-msg', (fromWho, message, time) => {
-  const formattedMessage = `${fromWho.clientIdentifierId}: ${message} at ${time}`;
+  const formattedMessage = `${fromWho}: ${message} at ${time}`;
   appendMessage(formattedMessage);
   
   // // Store the received message in the chatlog
-  // if (chatlog[fromWho]) {
+  // if (chatlog[fromWho]) {  
   //   chatlog[fromWho].push(formattedMessage);
   // } else {
   //   chatlog[fromWho] = [formattedMessage];
@@ -45,7 +45,7 @@ messageForm.addEventListener('submit', e => {
   const message = messageInput.value;
   const time = new Date();
   // console.log("message from you : ", message);
-  appendMessage(`You: ${message} at ${time}`);
+  appendMessage(`You: ${message} `);
   // console.log("currently in chat with before emmit : ", currentlyInChatWith);
   socket.emit('chat-with', message, time);
   messageInput.value = '';
