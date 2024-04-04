@@ -22,51 +22,64 @@ const io = new Server(server, {
   }
 })
 
-let activeUsers = [];
-let socketIdDetails = {};
+let activeUsers = []; //account number and em[ployee ids.
+let socketIdToIdentifier = {}; // map socket to active users
+let complaintMap = {} //key is complaint, val is list of socket.ids who asked for it.
+let socketIdToComplaintId = {} // what socket id brought which complaint
+
+
 
 io.on('connection', socket => {
 
   socket.on('new-user', (clientIdentifierId, complaintId) => {
-    // Check if the complaint ID already exists in socketIdDetails
-    if (Object.values(socketIdDetails).filter(user => user.complaintId === complaintId).length < 3) {
-      const obj = {
-        "complaintId" : complaintId,
-        "clientIdentifierId": clientIdentifierId,
-        "socketId": socket.id
-      };
-    
-      activeUsers.push(obj); // Push the entire obj, not just clientIdentifierId
-      console.log("New User Connected", activeUsers);
-      socketIdDetails[socket.id] = obj;
+
+    activeUsers.push(clientIdentifierId);
+    socketIdToIdentifier[socket.id] = clientIdentifierId;
+
+    socketIdToComplaintId[socket.id] = complaintId
+
+    if (complaintMap[complaintId]) {
+      complaintMap[complaintId].push(socket.id);
     } else {
-      console.log("More than 3 users already connected with the same complaint ID. Cannot proceed.");
-      // You may add additional logic here to handle the case where more than 3 users are already connected with the same complaint ID.
+      complaintMap[complaintId] = [socket.id]; // Correctly initialize the array for the complaintId
     }
     
     io.emit('user-connected', activeUsers); // Broadcast to all connected clients
   });
   
 
-  socket.on("chat-with", (message) => {
-    const senderObj = socketIdDetails[socket.id];
-    let recipient = "";
+  socket.on("chat-with", (message, time) => {
+    if (complaintMap[socketIdToComplaintId[socket.id]]) {
+      complaintMap[socketIdToComplaintId[socket.id]].forEach(socketId => {
+        io.to(socketId).emit("receive-msg", socketIdToIdentifier[socket.id], message, time);
+      });
+    } else {
+      console.log("ERROR");
+    }
+  });
   
-    // Finding recipient based on condition
-    for (const recipientId in socketIdDetails) {
-      const recipientObj = socketIdDetails[recipientId];
-      if (recipientObj.complaintId === senderObj.complaintId) {
-        recipient = recipientObj;
-        break; // Exit loop if recipient found
+
+  socket.on('disconnect', () => {
+    const disconnectingUser = socketIdToIdentifier[socket.id];
+    socket.broadcast.emit('user-disconnected', disconnectingUser);
+  
+    // Remove from activeUsers
+    activeUsers = activeUsers.filter(id => id !== disconnectingUser);
+  
+    // Remove socket ID from the complaintMap
+    const complaintId = socketIdToComplaintId[socket.id];
+    if (complaintMap[complaintId]) {
+      complaintMap[complaintId] = complaintMap[complaintId].filter(id => id !== socket.id);
+      if (complaintMap[complaintId].length === 0) {
+        delete complaintMap[complaintId];
       }
     }
   
-    if (recipient) {
-      io.to(recipient.socketId).emit("receive-msg", senderObj, message); // Emit message to recipient's socketId
-    } else {
-      console.log(`User ${senderObj.complaintId} not found`);
-    }
+    // Cleanup mappings
+    delete socketIdToIdentifier[socket.id];
+    delete socketIdToComplaintId[socket.id];
   });
+  
   
 });
 
