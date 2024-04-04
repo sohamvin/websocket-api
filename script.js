@@ -1,39 +1,38 @@
-const socket = io('http://localhost:3000')
+const socket = io('http://localhost:3000');
 const sidebar = document.getElementById('sidebar');
 const messageContainer = document.getElementById('message-container');
 const messageForm = document.getElementById('send-container');
 const messageInput = document.getElementById('message-input');
 
-let chatlog = {
+let chatlog = {};
 
-}
-
-const uname = prompt('What is your name?')
+const uname = prompt('What is your name?');
+const complaintId = prompt("What is the complaint id?");
 
 console.log(uname);
 
-let inwith = ""
+let currentlyInChatWith = "";
 
 let active = [];
 
-socket.emit('new-user', uname);
+socket.emit('new-user', uname, complaintId);
 
 socket.on('user-connected', (activeUsers) => {
-  active = activeUsers;
+  active = activeUsers.map(user => user.clientIdentifierId); // Extracting only clientIdentifierId from activeUsers array
   showActive();
 });
 
-socket.on('receive-msg', (fromUser, message) => {
-  const formattedMessage = `${fromUser}: ${message}`;
+socket.on('receive-msg', (fromWho, message) => {
+  const formattedMessage = `${fromWho.clientIdentifierId}: ${message}`;
   const messageElement = document.createElement('div');
   messageElement.innerText = formattedMessage;
   appendMessage(formattedMessage);
   
   // Store the received message in the chatlog
-  if (chatlog[fromUser]) {
-    chatlog[fromUser].push(formattedMessage);
+  if (chatlog[fromWho.clientIdentifierId]) {
+    chatlog[fromWho.clientIdentifierId].push(formattedMessage);
   } else {
-    chatlog[fromUser] = [formattedMessage];
+    chatlog[fromWho.clientIdentifierId] = [formattedMessage];
   }
 });
 
@@ -41,19 +40,14 @@ messageForm.addEventListener('submit', e => {
   e.preventDefault();
   const message = messageInput.value;
   const messageElement = document.createElement('div')
-  messageElement.innerText = "you : " + message
-  if(chatlog[inwith]) {
-    chatlog[inwith].push(messageElement); // Push messageElement to the array
-  } else {
-    let li = []
-    li.push(messageElement); // Push messageElement to the new array
-    chatlog[inwith] = li;
-  }
-
+  messageElement.innerText = "You: " + message
+  console.log("message from you : ", message);
   appendMessage(`You: ${message}`);
-  socket.emit('chat-with', inwith, message); // Corrected parameter order
+  console.log("currently in chat with before emmit : ", currentlyInChatWith);
+  socket.emit('chat-with', message);
   messageInput.value = '';
 });
+
 
 function showActive() {
   sidebar.innerHTML = '';
@@ -74,19 +68,15 @@ function appendMessage(message) {
 
 function openChat(user) {
   console.log(`Opening chat with ${user}`);
-  inwith = user;
+  currentlyInChatWith = user;
 
   messageContainer.innerHTML = '';
 
-  if(chatlog[inwith]){
-    chatlog[inwith].forEach(ele =>{
-      messageContainer.push(ele);
+  if(chatlog[currentlyInChatWith]){
+    chatlog[currentlyInChatWith].forEach(message => {
+      appendMessage(message); // Append stored messages to message container
     });
   } else {
     messageContainer.innerHTML = ''
   }
-
-
-  // Add your logic to open the chat with the selected user
 }
-
